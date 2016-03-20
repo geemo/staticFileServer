@@ -6,16 +6,45 @@ let zlib = require('zlib');
 
 let mime = require('./mime.json');
 let config = require('./config.json');
+let parseRange = require('./parseRange.js');
+
+let cacheHandle = (res, ext) => {
+
+    if (new RegExp(config['expiresMatch'], 'i').test(ext)) {
+        let expires = new Date();
+        expires.setTime(expires.getTime() + config['maxAge'] * 1000);
+
+        res.setHeader('Expires', expires.toUTCString());
+        res.setHeader('Cache-Control', 'max-age=' + config['maxAge']);
+    }
+};
+
+let compressHandle = (req, res, fileStream, ext) => {
+
+    let compressMatch = new RegExp(config['compressMatch'], 'i').test(ext);
+    let acceptEncoding = req.headers['accept-encoding'];
+
+    if (compressMatch && new RegExp('\\bgzip\\b', 'i').test(acceptEncoding)) {
+        res.writeHead(200, 'Ok', { 'Content-Encoding': 'gzip' });
+        fileStream.pipe(zlib.createGzip()).pipe(res);
+    } else if (compressMatch && new RegExp('\\bdeflate\\b', 'i').test(acceptEncoding)) {
+        res.writeHead(200, 'Ok', { 'Content-Encoding': 'deflate' });
+        fileStream.pipe(zlib.createDeflate()).pipe(res);
+    } else {
+        res.writeHead(200, 'Ok');
+        fileStream.pipe(res);
+    }
+
+};
 
 let pathHandle = (realPath, req, res) => {
-
     fs.stat(realPath, (err, stats) => {
         if (err) {
             res.writeHead(404, 'Not Found', { 'Content-Type': 'text/plain' });
             res.end('the request URL ' + pathname + ' was not found on this server!');
         } else {
             if (stats.isDirectory()) {
-            	pathHandle(path.join(realPath, '/', config['homePageFile']), req, res);
+                pathHandle(path.join(realPath, '/', config['homePageFile']), req, res);
             } else {
                 let lastModified = new Date(stats.mtime);
                 let ifModifiedSince = new Date(req.headers['if-modified-since']);
@@ -30,28 +59,25 @@ let pathHandle = (realPath, req, res) => {
                     ext = ext ? ext.slice(1) : 'unknow';
                     res.setHeader('Content-Type', mime[ext] || 'text/plain');
 
-                    if (new RegExp(config['expiresMatch'], 'i').test(ext)) {
-                        let expires = new Date();
-                        expires.setTime(expires.getTime() + config['maxAge'] * 1000);
-
-                        res.setHeader('Expires', expires.toUTCString());
-                        res.setHeader('Cache-Control', 'max-age=' + config['maxAge']);
-                    }
-
-                    let compressMatch = new RegExp(config['compressMatch'], 'i').test(ext);
-                    let acceptEncoding = req.headers['accept-encoding'];
-                    let fileStream = fs.createReadStream(realPath);
-
-                    if (compressMatch && new RegExp('\\bgzip\\b', 'i').test(acceptEncoding)) {
-                        res.writeHead(200, 'Ok', { 'Content-Encoding': 'gzip' });
-                        fileStream.pipe(zlib.createGzip()).pipe(res);
-                    } else if (compressMatch && new RegExp('\\bdeflate\\b', 'i').test(acceptEncoding)) {
-                        res.writeHead(200, 'Ok', { 'Content-Encoding': 'deflate' });
-                        fileStream.pipe(zlib.createDeflate()).pipe(res);
+                    cacheHandle(res, ext);
+                    if(req.headers['range']){
+                    	let range = parseRange(req.headers['range'], stats.size);
+                    	console.log(range);
+                    	if(range){
+                    		let rangeStream = fs.createReadStream(realPath, range);
+                    		res.setHeader('Content-Length', range.end - range.start + 1);
+                    		res.setHeader('Content-Range', 'byptes ' + range.start + '-' + range.end + '/' + stats.size);
+                    		compressHandle(req, res, rangeStream, ext);
+                    	} else {
+                    		res.writeHead(416, "Request Range Not Satisfiable");
+                    		res.end();
+                    	}
                     } else {
-                        res.writeHead(200, 'Ok');
-                        fileStream.pipe(res);
+                    	let fileStream = fs.createReadStream(realPath);
+                    	compressHandle(req, res, fileStream, ext);
                     }
+
+
                 }
             }
         }
@@ -67,6 +93,7 @@ module.exports = exports = (req, res) => {
     let realPath = path.join('static', path.normalize(pathname.replace(/\.\./g, '')));
 
     res.setHeader('Server', 'Node/5.8.0');
+    res.setHeader('Accept-Range', 'bytes');
     pathHandle(realPath, req, res);
 
 };
