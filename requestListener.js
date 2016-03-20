@@ -18,12 +18,12 @@ module.exports = exports = (req, res) => {
                     res.writeHead(500, 'Internal Server Error', { 'Content-Type': 'text/plain' });
                     res.end(err.stack);
                 } else {
-                    let lastModified = stats.mtime.toUTCString();
-                    let ifModifiedSince = req.headers['if-modified-since'];
+                    let lastModified = new Date(stats.mtime);
+                    let ifModifiedSince = new Date(req.headers['if-modified-since']);
 
-                    res.setHeader('Last-Modified', lastModified);
+                    res.setHeader('Last-Modified', lastModified.toUTCString());
                     if (ifModifiedSince &&
-                        new Date(lastModified).getTime() <= new Date(ifModifiedSince).getTime()) {
+                        lastModified.getTime() <= ifModifiedSince.getTime()) {
                         res.writeHead(304, 'Not Modified', { 'Content-Type': 'text/plain' });
                         res.end();
                     } else {
