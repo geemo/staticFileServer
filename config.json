@@ -1,0 +1,7 @@
+{
+	"host": "127.0.0.1",
+	"port": 80,
+	"expiresMatch": "^(css|js|html|txt|jpg|png|gif)$",
+	"compressMatch": "^(css|js|html|txt)$",
+	"maxAge": 2592000
+}

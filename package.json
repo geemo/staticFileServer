@@ -1,0 +1,22 @@
+{
+  "name": "static-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tenterrain/staticFileServer.git"
+  },
+  "keywords": [
+    "static-server"
+  ],
+  "author": "tenterrain",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tenterrain/staticFileServer/issues"
+  },
+  "homepage": "https://github.com/tenterrain/staticFileServer#readme"
+}
