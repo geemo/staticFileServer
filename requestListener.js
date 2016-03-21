@@ -92,6 +92,6 @@ let pathHandle = (req, res) => {
 
 module.exports = exports = (req, res) => {
     res.setHeader('Server', 'Node/5.8.0');
-    res.setHeader('Accept-Range', 'bytes');
+    res.setHeader('Accept-Ranges', 'bytes');
     pathHandle(req, res);
 };
