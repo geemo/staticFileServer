@@ -37,8 +37,8 @@ let compressHandle = (req, res, stream, ext, status) => {
 
 };
 
-let pathHandle = (req, res) => {
-    let pathname = url.parse(req.url).pathname;
+let pathHandle = (url_path, req, res) => {
+    let pathname = url.parse(url_path).pathname;
     if (pathname[pathname.length - 1] === '/') {
         pathname += config['homePageFile'];
     }
@@ -93,5 +93,5 @@ let pathHandle = (req, res) => {
 module.exports = exports = (req, res) => {
     res.setHeader('Server', 'Node/5.8.0');
     res.setHeader('Accept-Ranges', 'bytes');
-    pathHandle(req, res);
+    pathHandle(req.url, req, res);
 };
